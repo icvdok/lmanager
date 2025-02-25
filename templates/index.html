@@ -1,73 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Get selections and options from Inventree</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-        <link rel="stylesheet" type="text/css" href="/static/styles.css">
-        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    </head>
-    <body>
-        <img src="/static/logo.png" alt="Logo" style="width:100px;height:auto;">
-        <h1>InvenTree location move</h1>
-        <p>Move sublocations starting from parent to another.</p>
-        <form id="locationForm" method="post">
-            <label for="source_location_parent">Source Location Parent:</label><br>
-            <input type="text" id="source_location_parent" name="source_location_parent" required><br><br>
-            <label for="target_location_parent">Target Location Parent:</label><br>
-            <input type="text" id="target_location_parent" name="target_location_parent" required><br><br>
-            <label for="simulate">Run in simulation mode?</label><br>
-            <select id="simulate" name="simulate">
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-            </select><br><br>
-            <input type="submit" value="Move">
-            <button type="button" id="clearButton">Clear</button>
-        </form>
-        <div id="sublocations">
-            <h2>Sublocations</h2>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get selections and options from Inventree</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <style>
+        ul {
+            list-style-type: none; /* Remove dots from the list */
+        }
+    </style>
+</head>
+<body>
+    <img src="/static/logo.png" alt="Logo" style="width:100px;height:auto;">
+    <h1>InvenTree location move</h1>
+    <p>Move sublocations starting from parent to another.</p>
+    <form id="locationForm" method="post">
+        <label for="source_location_parent">Source Location Parent:</label><br>
+        <input type="text" id="source_location_parent" name="source_location_parent" value="{{ source_location_parent }}" required><br><br>
+        <label for="target_location_parent">Target Location Parent:</label><br>
+        <input type="text" id="target_location_parent" name="target_location_parent" value="{{ target_location_parent }}" required><br><br>
+        <label for="simulate">Run in simulation mode?</label><br>
+        <select id="simulate" name="simulate" required>
+            <option value="" disabled {% if not simulate %}selected{% endif %}>Select an option</option>
+            <option value="true" {% if simulate %}selected{% endif %}>Yes</option>
+            <option value="false" {% if not simulate %}selected{% endif %}>No</option>
+        </select><br><br>
+        <input type="submit" name="action" value="Show Sublocations">
+        <button type="button" id="clearButton">Clear</button>
+    </form>
+    <div id="sublocations">
+        <h2>Sublocations</h2>
+        <form id="moveForm" method="post">
+            <input type="checkbox" id="selectAll" name="selectAll"> Select All<br><br>
             <ul id="sublocations_list">
                 {% for sublocation in sublocations %}
-                    <li>{{ sublocation.pathstring }}{% if sublocation.simulated %} (Simulated){% endif %}</li>
+                    <li>
+                        <input type="checkbox" name="selected_sublocations" value="{{ sublocation.pk }}">
+                        {{ sublocation.pathstring }}{% if sublocation.simulated %} (Simulated){% endif %}
+                    </li>
                 {% endfor %}
             </ul>
-        </div>
-        <script>
-            $(function() {
-                var locations = JSON.parse('{{ locations | tojson | safe }}');
+            <input type="hidden" name="source_location_parent" value="{{ source_location_parent }}">
+            <input type="hidden" name="target_location_parent" value="{{ target_location_parent }}">
+            <input type="hidden" name="simulate" value="{{ 'true' if simulate else 'false' }}">
+            <input type="submit" name="action" value="Move Selected Sublocations">
+        </form>
+    </div>
+    <script>
+        $(function() {
+            var locations = JSON.parse('{{ locations | tojson | safe }}');
 
-                $("#source_location_parent").autocomplete({
-                    source: locations.map(function(location) {
-                        return { label: location.pathstring, value: location.pk };
-                    }),
-                    minLength: 2,
-                    select: function(event, ui) {
-                        $(this).val(ui.item.label);
-                        return false;
-                    }
-                });
-
-                $("#target_location_parent").autocomplete({
-                    source: locations.map(function(location) {
-                        return { label: location.pathstring, value: location.pk };
-                    }),
-                    minLength: 2,
-                    select: function(event, ui) {
-                        $(this).val(ui.item.label);
-                        return false;
-                    }
-                });
-
-                $("#clearButton").on("click", function() {
-                    $("#source_location_parent").val('');
-                    $("#target_location_parent").val('');
-                    $("#sublocations_list").empty();
-                });
+            $("#source_location_parent").autocomplete({
+                source: locations.map(function(location) {
+                    return { label: location.pathstring, value: location.pk };
+                }),
+                minLength: 2,
+                select: function(event, ui) {
+                    $(this).val(ui.item.label);
+                    return false;
+                }
             });
-        </script>
-    </body>
+
+            $("#target_location_parent").autocomplete({
+                source: locations.map(function(location) {
+                    return { label: location.pathstring, value: location.pk };
+                }),
+                minLength: 2,
+                select: function(event, ui) {
+                    $(this).val(ui.item.label);
+                    return false;
+                }
+            });
+
+            $("#clearButton").on("click", function() {
+                $("#source_location_parent").val('');
+                $("#target_location_parent").val('');
+                $("#simulate").val('');
+                $("#sublocations_list").empty();
+            });
+
+            $("#selectAll").on("change", function() {
+                $("input[name='selected_sublocations']").prop('checked', this.checked);
+            });
+        });
+    </script>
+</body>
 </html>

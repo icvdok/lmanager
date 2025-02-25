@@ -41,8 +41,9 @@ def get_sublocations(parent_id):
         return response.json()
     return []
 
+# Function to move sublocations to a new parent location
 def move_sublocations(sublocations, target_parent_id, simulate):
-    logging.debug(f'call function move_sublocations with simulate={simulate}')
+    logging.debug('call function move_sublocations')
     url = f'{base_url}stock/location/'
     if simulate:
         logging.info(f'Simulating move of {len(sublocations)} sublocations to parent ID {target_parent_id}')
@@ -60,28 +61,16 @@ def move_sublocations(sublocations, target_parent_id, simulate):
 def index():
     locations = get_all_locations()
     sublocations = []
-    source_location_parent = ''
-    target_location_parent = ''
-    simulate = False
-
     if request.method == 'POST':
-        action = request.form.get('action')
         source_location_parent = request.form.get('source_location_parent')
         target_location_parent = request.form.get('target_location_parent')
         simulate = request.form.get('simulate') == 'true'
-        logging.debug(f'Form action: {action}, simulate: {simulate}')
         selected_location = next((loc for loc in locations if loc['pathstring'] == source_location_parent), None)
         target_location = next((loc for loc in locations if loc['pathstring'] == target_location_parent), None)
-
-        if action == 'Show Sublocations' and selected_location:
+        if selected_location and target_location:
             sublocations = get_sublocations(selected_location['pk'])
-        elif action == 'Move Selected Sublocations' and selected_location and target_location:
-            selected_sublocations = request.form.getlist('selected_sublocations')
-            sublocations = get_sublocations(selected_location['pk'])
-            sublocations = [sublocation for sublocation in sublocations if str(sublocation['pk']) in selected_sublocations]
             sublocations = move_sublocations(sublocations, target_location['pk'], simulate)
-
-    return render_template('index.html', locations=locations, sublocations=sublocations, source_location_parent=source_location_parent, target_location_parent=target_location_parent, simulate=simulate)
+    return render_template('index.html', locations=locations, sublocations=sublocations, simulate=simulate)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5556, debug=True)
