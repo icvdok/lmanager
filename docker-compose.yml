@@ -1,0 +1,20 @@
+
+services:
+  web:
+    container_name: prd_gb_location_move
+    build: .
+    networks:
+      - default
+    ports:
+      - "5556:5556"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    restart: unless-stopped
+
+networks:
+  default:
+    name: net_prd_gb_location_move
+    driver: bridge
+

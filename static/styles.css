@@ -1,0 +1,39 @@
+/* static/style.css */
+body {
+    background-color: rgb(59, 59, 59);
+    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+}
+
+h1 {
+    font-family: 'Conthrax', serif; /* Change this to your desired font */
+    color: rgb(252, 234, 72);
+}
+
+p {
+    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+    color: darkkhaki;
+}
+
+label, input, select {
+    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+    color: rgb(129, 129, 129);
+}
+
+ul, li {
+    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+    color: darkkhaki; /* Same color as paragraph text */
+}
+
+button, input[type="submit"] {
+    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+    color: rgb(129, 129, 129);
+    background-color: rgb(252, 234, 72);
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover, input[type="submit"]:hover {
+    background-color: rgb(200, 185, 55);
+}
