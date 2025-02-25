@@ -41,20 +41,16 @@ def get_sublocations(parent_id):
         return response.json()
     return []
 
-def move_sublocations(sublocations, target_parent_id, simulate):
-    logging.debug(f'call function move_sublocations with simulate={simulate}')
+def move_sublocations(sublocations, target_parent_id):
+    logging.debug('call function move_sublocations')
     url = f'{base_url}stock/location/'
-    if simulate:
-        logging.info(f'Simulating move of {len(sublocations)} sublocations to parent ID {target_parent_id}')
-        return [{'pk': sublocation['pk'], 'pathstring': sublocation['pathstring'], 'simulated': True} for sublocation in sublocations]
-    else:
-        for sublocation in sublocations:
-            sublocation_id = sublocation['pk']
-            data = {'parent': target_parent_id}
-            response = requests.patch(f'{url}{sublocation_id}/', headers=headers, json=data)
-            if response.status_code != 200:
-                logging.error(f'Failed to move sublocation {sublocation_id}. Status code: {response.status_code}')
-        return sublocations
+    for sublocation in sublocations:
+        sublocation_id = sublocation['pk']
+        data = {'parent': target_parent_id}
+        response = requests.patch(f'{url}{sublocation_id}/', headers=headers, json=data)
+        if response.status_code != 200:
+            logging.error(f'Failed to move sublocation {sublocation_id}. Status code: {response.status_code}')
+    return sublocations
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -62,14 +58,11 @@ def index():
     sublocations = []
     source_location_parent = ''
     target_location_parent = ''
-    simulate = False
 
     if request.method == 'POST':
         action = request.form.get('action')
         source_location_parent = request.form.get('source_location_parent')
         target_location_parent = request.form.get('target_location_parent')
-        simulate = request.form.get('simulate') == 'true'
-        logging.debug(f'Form action: {action}, simulate: {simulate}')
         selected_location = next((loc for loc in locations if loc['pathstring'] == source_location_parent), None)
         target_location = next((loc for loc in locations if loc['pathstring'] == target_location_parent), None)
 
@@ -79,9 +72,9 @@ def index():
             selected_sublocations = request.form.getlist('selected_sublocations')
             sublocations = get_sublocations(selected_location['pk'])
             sublocations = [sublocation for sublocation in sublocations if str(sublocation['pk']) in selected_sublocations]
-            sublocations = move_sublocations(sublocations, target_location['pk'], simulate)
+            sublocations = move_sublocations(sublocations, target_location['pk'])
 
-    return render_template('index.html', locations=locations, sublocations=sublocations, source_location_parent=source_location_parent, target_location_parent=target_location_parent, simulate=simulate)
+    return render_template('index.html', locations=locations, sublocations=sublocations, source_location_parent=source_location_parent, target_location_parent=target_location_parent)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5556, debug=True)

@@ -25,12 +25,6 @@
         <input type="text" id="source_location_parent" name="source_location_parent" value="{{ source_location_parent }}" required><br><br>
         <label for="target_location_parent">Target Location Parent:</label><br>
         <input type="text" id="target_location_parent" name="target_location_parent" value="{{ target_location_parent }}" required><br><br>
-        <label for="simulate">Run in simulation mode?</label><br>
-        <select id="simulate" name="simulate" required>
-            <option value="" disabled {% if not simulate %}selected{% endif %}>Select an option</option>
-            <option value="true" {% if simulate %}selected{% endif %}>Yes</option>
-            <option value="false" {% if not simulate %}selected{% endif %}>No</option>
-        </select><br><br>
         <input type="submit" name="action" value="Show Sublocations">
         <button type="button" id="clearButton">Clear</button>
     </form>
@@ -42,14 +36,13 @@
                 {% for sublocation in sublocations %}
                     <li>
                         <input type="checkbox" name="selected_sublocations" value="{{ sublocation.pk }}">
-                        {{ sublocation.pathstring }}{% if sublocation.simulated %} (Simulated){% endif %}
+                        {{ sublocation.pathstring }}
                     </li>
                 {% endfor %}
             </ul>
             <input type="hidden" name="source_location_parent" value="{{ source_location_parent }}">
             <input type="hidden" name="target_location_parent" value="{{ target_location_parent }}">
-            <input type="hidden" name="simulate" value="{{ 'true' if simulate else 'false' }}">
-            <input type="submit" name="action" value="Move Selected Sublocations">
+            <input type="submit" name="action" value="Move Selected Sublocations" onclick="return confirmMove()">
         </form>
     </div>
     <script>
@@ -81,7 +74,6 @@
             $("#clearButton").on("click", function() {
                 $("#source_location_parent").val('');
                 $("#target_location_parent").val('');
-                $("#simulate").val('');
                 $("#sublocations_list").empty();
             });
 
@@ -89,6 +81,10 @@
                 $("input[name='selected_sublocations']").prop('checked', this.checked);
             });
         });
+
+        function confirmMove() {
+            return confirm("Are you sure you want to move the selected sublocations?");
+        }
     </script>
 </body>
 </html>
