@@ -19,7 +19,7 @@
 <body>
     <img src="/static/logo.png" alt="Logo" style="width:100px;height:auto;">
     <h1>InvenTree location move</h1>
-    <p>Move sublocations starting from parent to another.</p>
+    <p>Move locations from parent to another.</p>
     <form id="locationForm" method="post">
         <label for="source_location_parent">Source Location Parent:</label><br>
         <input type="text" id="source_location_parent" name="source_location_parent" value="{{ source_location_parent }}" required><br><br>
@@ -29,7 +29,7 @@
         <button type="button" id="clearButton">Clear</button>
     </form>
     <div id="sublocations">
-        <h2>Sublocations</h2>
+        <p></p>
         <form id="moveForm" method="post">
             <input type="checkbox" id="selectAll" name="selectAll"> Select All<br><br>
             <ul id="sublocations_list">
@@ -75,6 +75,7 @@
                 $("#source_location_parent").val('');
                 $("#target_location_parent").val('');
                 $("#sublocations_list").empty();
+                history.pushState(null, '', '/'); // Update the URL to prevent form re-submission
             });
 
             $("#selectAll").on("change", function() {
