@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get selections and options from Inventree</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <style>
+        ul {
+            list-style-type: none; /* Remove dots from the list */
+        }
+    </style>
+</head>
+<body>
+    <img src="/static/logo.png" alt="Logo" style="width:100px;height:auto;">
+    <h1>InvenTree location create</h1>
+    <p>Create location(s) starting from the highest and next available progressive number.</p>
+    <p>Next available progressive number: <span style="color: red;">{{ next_number }}</span></p>
+    <form action="/slcreate" method="POST">
+        <label for="location_type">Location Type:</label><br>
+        <select id="location_type" name="location_type" required>
+            <option value="">Select a location type</option>
+            {% for location_type in location_types %}
+                <option value="{{ location_type.pk }}">{{ location_type.name }}</option>
+            {% endfor %}
+        </select><br>
+        <p></p>
+        <label for="num_new_locations">Number of new locations:</label><br>
+        <input type="number" id="num_new_locations" name="num_new_locations" value="1" min="0" required><br>
+        <p></p>
+        <label for="parent_location_name">Parent location name:</label><br>
+        <input type="text" id="parent_location_name" name="parent_location_name" placeholder="Enter parent location name" required><br>
+        <p></p>
+        <input type="submit" value="Submit">
+    </form>
+    <script>
+        $(function() {
+            var locations = {{ locations | tojson | safe }};
+            var locationPaths = locations.map(function(location) {
+                return location.pathstring;
+            });
+            $("#parent_location_name").autocomplete({
+                source: locationPaths
+            });
+        });
+    </script>
+</body>
+</html>
