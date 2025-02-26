@@ -1,33 +1,50 @@
 /* static/style.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
 body {
-    background-color: rgb(59, 59, 59);
-    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
+    background-color: rgb(27, 27, 27);
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+    padding: 20px;
 }
 
 h1 {
-    font-family: 'Conthrax', serif; /* Change this to your desired font */
-    color: rgb(252, 234, 72);
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(65.1%, 61.57%, 55.69%);
+    font-weight: normal; /* Disable bold */
 }
 
 p {
-    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
-    color: darkkhaki;
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(65.1%, 61.57%, 55.69%);
 }
 
-label, input, select {
-    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
-    color: rgb(129, 129, 129);
+label {
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(65.1%, 61.57%, 55.69%);
+}
+
+input {
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(43, 43, 43);
+}
+
+select {
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(43, 43, 43);
 }
 
 ul, li {
-    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
-    color: darkkhaki; /* Same color as paragraph text */
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(65.1%, 61.57%, 55.69%); /* Same color as paragraph text */
+    font-weight: normal; /* Disable bold */
 }
 
 button, input[type="submit"] {
-    font-family: 'Conthrax', sans-serif; /* Change this to your desired font */
-    color: rgb(129, 129, 129);
-    background-color: rgb(252, 234, 72);
+    font-family: 'Roboto', sans-serif; /* Changed to Roboto */
+    color: rgb(65.1%, 61.57%, 55.69%);
+    background-color: rgb(53, 53, 53);
     border: none;
     padding: 10px 20px;
     cursor: pointer;
@@ -36,4 +53,64 @@ button, input[type="submit"] {
 
 button:hover, input[type="submit"]:hover {
     background-color: rgb(200, 185, 55);
+}
+
+nav {
+    background-color: #333;
+    color: rgb(65.1%, 61.57%, 55.69%);
+    padding: 10px 0;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+nav ul li {
+    margin: 0 15px;
+}
+
+nav ul li a {
+    color: rgb(65.1%, 61.57%, 55.69%);
+    text-decoration: none;
+    font-weight: normal;
+}
+
+nav ul li a:hover {
+    text-decoration: underline;
+}
+
+nav ul li img.logo {
+    height: 50px;
+    margin-right: 5px;
+}
+
+nav ul li.app-name {
+    font-size: 1.5em;
+    font-weight: normal;
+    margin-right: auto;
+}
+
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: rgb(71, 71, 71);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    color: #000; /* Set text color to black for readability */
+}
+
+input[type="checkbox"] {
+    accent-color: rgb(65.1%, 61.57%, 55.69%); /* Change the checkbox color */
+    width: 15px; /* Set the width of the checkbox */
+    height: 15px; /* Set the height of the checkbox */
+    cursor: pointer; /* Change the cursor to pointer when hovering over the checkbox */
+}
+
+input[type="checkbox"]:checked {
+    background-color: rgb(65.1%, 61.57%, 55.69%); /* Change the background color when checked */
+    border: 2px solid rgb(65.1%, 61.57%, 55.69%); /* Change the border color when checked */
 }
