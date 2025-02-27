@@ -117,28 +117,28 @@ def generate_new_locations(matching_locations, num_new_locations, highest_number
     
     return new_locations
 
-def create_new_location(next_number, parent_location_id):
-    new_location_name = f'gb_{next_number}'
-    description = 'gridfinity_bin'
-    location_type_index = 4  # Use the pk for '_gridfinity_bin'
+# def create_new_location(next_number, parent_location_id):
+#     new_location_name = f'gb_{next_number}'
+#     description = 'gridfinity_bin'
+#     location_type_index = 4  # Use the pk for '_gridfinity_bin'
     
-    url = f'{base_url}stock/location/'
-    data = {
-        'name': new_location_name,
-        'description': description,
-        'parent': parent_location_id,
-        'location_type': location_type_index  # Updated field name
-    }
-    response = requests.post(url, headers=headers, json=data)
-    if response.status_code == 201:
-        return {
-            'message': f'New location "{new_location_name}" with description "{description}" and location type index "{location_type_index}" created successfully under parent location ID {parent_location_id}.'
-        }
-    else:
-        return {
-            'message': f'Failed to create new location. Status code: {response.status_code}',
-            'details': response.json()
-        }
+#     url = f'{base_url}stock/location/'
+#     data = {
+#         'name': new_location_name,
+#         'description': description,
+#         'parent': parent_location_id,
+#         'location_type': location_type_index  # Updated field name
+#     }
+#     response = requests.post(url, headers=headers, json=data)
+#     if response.status_code == 201:
+#         return {
+#             'message': f'New location "{new_location_name}" with description "{description}" and location type index "{location_type_index}" created successfully under parent location ID {parent_location_id}.'
+#         }
+#     else:
+#         return {
+#             'message': f'Failed to create new location. Status code: {response.status_code}',
+#             'details': response.json()
+#         }
 
 def get_location_types():
     url = f'{base_url}stock/location-type/'
@@ -164,7 +164,7 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
 
     # Ensure selected_type is not empty
     if not selected_type:
-        logging.error('f_Selected type is empty')
+        logging.error('Selected type is empty')
         return
 
     # Find the type name for the selected type
@@ -175,7 +175,7 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
             break
 
     if type_name is None:
-        logging.error(f'f_Invalid selected type: {selected_type}')
+        logging.error(f'Invalid selected type: {selected_type}')
         return
 
     # Find the description for the selected type
@@ -184,7 +184,15 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
     # Get the parent location ID from its name
     response = requests.get(f'{base_url}stock/location/', headers=headers, params={'name': parent_location_name})
     if response.status_code != 200:
-        logging.error(f'f_Failed to get parent location ID: {response.text}')
+        logging.error(f'Failed to get parent location ID: {response.text}')
+        return
+
+    # Log the API response for debugging
+    logging.debug(f'API response: {response.json()}')
+
+    # Check if the response is empty
+    if not response.json():
+        logging.error(f'No location found with name: {parent_location_name}')
         return
 
     parent_location_id = response.json()[0]['pk']
@@ -197,7 +205,7 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
             'parent': parent_location_id,
             'type': selected_type
         }
-        logging.info(f'f_Would create location: {data}')
+        logging.info(f'Would create location: {data}')
         # Uncomment the following lines to enable actual creation
         # response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
         # if response.status_code == 201:
