@@ -75,11 +75,13 @@ def find_highest_progressive_number(locations, location_types, selected_type):
             break
 
     highest_number = 0  # Initialize highest_number before the loop
+    matching_locations = []  # Initialize list to store matching locations
     if prefix is not None:
         # Loop through the locations and log any location name that starts with the identified prefix
         for location in locations:
             if location['name'].startswith(prefix):
                 logging.debug(f'f_Location found: {location["name"]}')
+                matching_locations.append(location['name'])  # Add matching location to the list
                 # Extract the number after the prefix and update highest_number if it's greater
                 try:
                     number = int(location['name'][len(prefix):])
@@ -87,10 +89,13 @@ def find_highest_progressive_number(locations, location_types, selected_type):
                         highest_number = number
                 except ValueError:
                     logging.warning(f'f_Invalid number format in location name: {location["name"]}')
+        
+        # Sort matching locations progressively
+        matching_locations.sort(key=lambda x: int(x[len(prefix):]))
     else:
         logging.debug(f'f_No valid prefix found for selected type {selected_type}.')
 
-    return highest_number
+    return highest_number, matching_locations
 
 def create_new_location(next_number, parent_location_id):
     new_location_name = f'gb_{next_number}'
@@ -165,22 +170,30 @@ def slcreate():
     if request.method == 'POST':
         parent_location_name = request.form.get('parent_location_name')
         selected_type = request.form.get('location_type')
-        num_new_locations = request.form.get('num_new_locations')
+        num_new_locations = int(request.form.get('num_new_locations'))
         logging.debug(f'r_Selected parent location: {parent_location_name}')
         logging.debug(f'r_Selected location type: {selected_type}')
         logging.debug(f'r_How many locations: {num_new_locations}')
 
-        # Find the highest progressive number for the selected type
-        highest_number = find_highest_progressive_number(locations, location_types, selected_type)
+        # Find the highest progressive number and matching locations for the selected type
+        highest_number, matching_locations = find_highest_progressive_number(locations, location_types, selected_type)
         logging.debug(f'r_highest_number identified: {highest_number}')
+        logging.debug(f'r_matching_locations identified: {matching_locations}')
         
         # Calculate the next available progressive number
         next_number = highest_number + 1
         logging.debug(f'r_next_number is: {next_number}')
         
-        return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types)
+        # Generate new locations
+        new_locations = []
+        prefix = matching_locations[0][:len(matching_locations[0]) - len(str(highest_number))] if matching_locations else ''
+        for i in range(num_new_locations):
+            new_locations.append(f'{prefix}{next_number + i}')
+        logging.debug(f'r_new_locations to create: {new_locations}')
+        
+        return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, matching_locations=matching_locations, new_locations=new_locations)
 
-    return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types)
+    return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, matching_locations=[], new_locations=[])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5556, debug=True)

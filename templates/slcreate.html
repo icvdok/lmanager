@@ -1,4 +1,3 @@
-
 {% extends "maintemplate.html" %}
 
 {% block title %}Location move{% endblock %}
@@ -24,6 +23,18 @@
         <p></p>
         <input type="submit" value="Submit">
     </form>
+    <h2>Matching Locations</h2>
+    <ul>
+        {% for location in matching_locations %}
+            <li>{{ location }}</li>
+        {% endfor %}
+    </ul>
+    <h2>New Locations to Create</h2>
+    <ul>
+        {% for location in new_locations %}
+            <li>{{ location }}</li>
+        {% endfor %}
+    </ul>
     <script>
         $(function() {
             var locations = {{ locations | tojson | safe }};
