@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import requests
 import json
 from dotenv import load_dotenv
@@ -97,6 +97,26 @@ def find_highest_progressive_number(locations, location_types, selected_type):
 
     return highest_number, matching_locations
 
+def generate_new_locations(matching_locations, num_new_locations, highest_number):
+    new_locations = []
+    existing_numbers = [int(loc.split('_')[1]) for loc in matching_locations]
+    
+    # Find gaps in the existing sequence
+    all_numbers = set(range(1, highest_number + num_new_locations + 1))
+    unused_numbers = sorted(all_numbers - set(existing_numbers))
+    
+    # Generate new locations to fill gaps first
+    for i in range(min(num_new_locations, len(unused_numbers))):
+        new_locations.append(f's_{unused_numbers[i]}')
+    
+    # If there are still new locations to create, continue from the highest number
+    next_number = highest_number + 1
+    while len(new_locations) < num_new_locations:
+        new_locations.append(f's_{next_number}')
+        next_number += 1
+    
+    return new_locations
+
 def create_new_location(next_number, parent_location_id):
     new_location_name = f'gb_{next_number}'
     description = 'gridfinity_bin'
@@ -133,6 +153,58 @@ def get_location_types():
             'details': response.json()
         }
 
+def create_new_locations(new_locations, parent_location_name, selected_type, location_types):
+    # Define the description rules
+    description_rules = {
+        'bin': 'gridfinity bin',
+        'sorter': 'sorter organizer',
+        'box': 'box contenitore',
+        'shelf': 'shelf armadio'
+    }
+
+    # Ensure selected_type is not empty
+    if not selected_type:
+        logging.error('f_Selected type is empty')
+        return
+
+    # Find the type name for the selected type
+    type_name = None
+    for location_type in location_types:
+        if location_type['pk'] == int(selected_type):
+            type_name = location_type['name']
+            break
+
+    if type_name is None:
+        logging.error(f'f_Invalid selected type: {selected_type}')
+        return
+
+    # Find the description for the selected type
+    description = description_rules.get(type_name, '')
+
+    # Get the parent location ID from its name
+    response = requests.get(f'{base_url}stock/location/', headers=headers, params={'name': parent_location_name})
+    if response.status_code != 200:
+        logging.error(f'f_Failed to get parent location ID: {response.text}')
+        return
+
+    parent_location_id = response.json()[0]['pk']
+
+    # Log the new locations to be created
+    for location in new_locations:
+        data = {
+            'name': location,
+            'description': description,
+            'parent': parent_location_id,
+            'type': selected_type
+        }
+        logging.info(f'f_Would create location: {data}')
+        # Uncomment the following lines to enable actual creation
+        # response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
+        # if response.status_code == 201:
+        #     logging.info(f'Successfully created location: {location}')
+        # else:
+        #     logging.error(f'Failed to create location: {location}, response: {response.text}')
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     locations = get_all_locations()
@@ -168,32 +240,41 @@ def slcreate():
     logging.debug('r_location_types function executed')
 
     if request.method == 'POST':
-        parent_location_name = request.form.get('parent_location_name')
-        selected_type = request.form.get('location_type')
-        num_new_locations = int(request.form.get('num_new_locations'))
-        logging.debug(f'r_Selected parent location: {parent_location_name}')
-        logging.debug(f'r_Selected location type: {selected_type}')
-        logging.debug(f'r_How many locations: {num_new_locations}')
+        if 'create_locations' in request.form:
+            parent_location_name = request.form.get('parent_location_name')
+            selected_type = request.form.get('location_type')
+            num_new_locations = int(request.form.get('num_new_locations'))
+            logging.debug(f'r_Selected parent location: {parent_location_name}')
+            logging.debug(f'r_Selected location type: {selected_type}')
+            logging.debug(f'r_How many locations: {num_new_locations}')
 
-        # Find the highest progressive number and matching locations for the selected type
-        highest_number, matching_locations = find_highest_progressive_number(locations, location_types, selected_type)
-        logging.debug(f'r_highest_number identified: {highest_number}')
-        logging.debug(f'r_matching_locations identified: {matching_locations}')
+            # Find the highest progressive number and matching locations for the selected type
+            highest_number, matching_locations = find_highest_progressive_number(locations, location_types, selected_type)
+            logging.debug(f'r_highest_number identified: {highest_number}')
+            logging.debug(f'r_matching_locations identified: {matching_locations}')
+            
+            # Calculate the next available progressive number
+            next_number = highest_number + 1
+            logging.debug(f'r_next_number is: {next_number}')
+            
+            # Generate new locations
+            new_locations = generate_new_locations(matching_locations, num_new_locations, highest_number)
+            logging.debug(f'r_new_locations to create: {new_locations}')
+            
+            # Combine and sort all locations progressively
+            all_locations = matching_locations + new_locations
+            all_locations.sort(key=lambda x: int(x.split('_')[1]))
+            
+            return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, all_locations=all_locations, new_locations=new_locations, parent_location_name=parent_location_name, selected_type=selected_type, num_new_locations=num_new_locations)
         
-        # Calculate the next available progressive number
-        next_number = highest_number + 1
-        logging.debug(f'r_next_number is: {next_number}')
-        
-        # Generate new locations
-        new_locations = []
-        prefix = matching_locations[0][:len(matching_locations[0]) - len(str(highest_number))] if matching_locations else ''
-        for i in range(num_new_locations):
-            new_locations.append(f'{prefix}{next_number + i}')
-        logging.debug(f'r_new_locations to create: {new_locations}')
-        
-        return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, matching_locations=matching_locations, new_locations=new_locations)
+        elif 'execute_creation' in request.form:
+            new_locations = request.form.getlist('new_locations')
+            parent_location_name = request.form.get('parent_location_name')
+            selected_type = request.form.get('location_type')
+            create_new_locations(new_locations, parent_location_name, selected_type, location_types)
+            return redirect(url_for('slcreate'))
 
-    return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, matching_locations=[], new_locations=[])
+    return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, all_locations=[], new_locations=[], parent_location_name='', selected_type='', num_new_locations=1)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5556, debug=True)

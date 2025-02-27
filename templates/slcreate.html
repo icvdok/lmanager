@@ -5,36 +5,38 @@
 {% block content %}
     <h1>location create</h1>
     <p>Create location(s) starting from the highest and next available progressive number.</p>
-    <p>Next available progressive number: <span style="color: red;">{{ next_number }}</span></p>
     <form action="/slcreate" method="POST">
         <label for="location_type">Location Type:</label><br>
         <select id="location_type" name="location_type" required>
             <option value="">Select a location type</option>
             {% for location_type in location_types %}
-                <option value="{{ location_type.pk }}">{{ location_type.name }}</option>
+                <option value="{{ location_type.pk }}" {% if location_type.pk == selected_type %}selected{% endif %}>{{ location_type.name }}</option>
             {% endfor %}
         </select><br>
         <p></p>
         <label for="num_new_locations">Number of new locations:</label><br>
-        <input type="number" id="num_new_locations" name="num_new_locations" value="1" min="0" required><br>
+        <input type="number" id="num_new_locations" name="num_new_locations" value="{{ num_new_locations }}" min="0" required><br>
         <p></p>
         <label for="parent_location_name">Parent location name:</label><br>
-        <input type="text" id="parent_location_name" name="parent_location_name" placeholder="Enter parent location name" required><br>
+        <input type="text" id="parent_location_name" name="parent_location_name" value="{{ parent_location_name }}" placeholder="Enter parent location name" required><br>
         <p></p>
-        <input type="submit" value="Submit">
+        <input type="submit" name="create_locations" value="Submit">
     </form>
-    <h2>Matching Locations</h2>
-    <ul>
-        {% for location in matching_locations %}
-            <li>{{ location }}</li>
-        {% endfor %}
-    </ul>
-    <h2>New Locations to Create</h2>
-    <ul>
-        {% for location in new_locations %}
-            <li>{{ location }}</li>
-        {% endfor %}
-    </ul>
+    <h2>Locations</h2>
+    <form action="/slcreate" method="POST">
+        <input type="hidden" name="parent_location_name" value="{{ parent_location_name }}">
+        <input type="hidden" name="location_type" value="{{ selected_type }}">
+        <ul>
+            {% for location in all_locations %}
+                {% if location in new_locations %}
+                    <li style="color: red;">{{ location }}<input type="hidden" name="new_locations" value="{{ location }}"></li>
+                {% else %}
+                    <li>{{ location }}</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+        <input type="submit" name="execute_creation" value="Execute">
+    </form>
     <script>
         $(function() {
             var locations = {{ locations | tojson | safe }};
