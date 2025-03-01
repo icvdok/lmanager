@@ -24,7 +24,7 @@ headers = {
 
 # Function to get all locations
 def get_all_locations():
-    logging.debug('call function get_all_location')
+    logging.debug('f_call function get_all_location')
     url = f'{base_url}stock/location/'
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
@@ -32,7 +32,7 @@ def get_all_locations():
     return []
 # Function to get sublocations by parent ID
 def get_sublocations(parent_id):
-    logging.debug('call function get_sublocations')
+    logging.debug('f_call function get_sublocations')
     url = f'{base_url}stock/location/'
     response = requests.get(url, headers=headers, params={'parent': parent_id})
     if response.status_code == 200:
@@ -40,7 +40,7 @@ def get_sublocations(parent_id):
     return []
 # Function to find the list of sublocation from a given parent
 def move_sublocations(sublocations, target_parent_id):
-    logging.debug('call function move_sublocations')
+    logging.debug('f_call function move_sublocations')
     url = f'{base_url}stock/location/'
     for sublocation in sublocations:
         sublocation_id = sublocation['pk']
@@ -49,56 +49,64 @@ def move_sublocations(sublocations, target_parent_id):
         if response.status_code != 200:
             logging.error(f'Failed to move sublocation {sublocation_id}. Status code: {response.status_code}')
     return sublocations
-    
+
 def find_highest_progressive_number(locations, location_types, selected_type):
+    logging.debug('f_call function find_highest_progressive_number')
     logging.debug(f'f_Location types provided: {location_types}')
     logging.debug(f'f_Selected type provided: {selected_type}')
 
-    # Define the prefix rules
-    prefix_rules = {
-        'bin': 'gb_',
-        'sorter': 's_',
-        'box': 'b_',
-        'shelf': 'a_'
+    # Define the prefixes
+    prefix_map = {
+        1: 'a_',  # Shelf
+        2: 'b_',  # Box
+        3: 's_',  # Sorter
+        4: 'gb_'  # Bin
     }
 
     # Find the prefix for the selected type
-    prefix = None
-    for location_type in location_types:
-        if location_type['pk'] == int(selected_type):
-            type_name = location_type['name']
-            if type_name in prefix_rules:
-                prefix = prefix_rules[type_name]
-                logging.debug(f'f_Prefix: {prefix}')
-            else:
-                logging.debug(f'f_Type {type_name} is ignored.')
-            break
+    prefix = prefix_map.get(int(selected_type))
+    if not prefix:
+        logging.error(f'f_No prefix found for selected type: {selected_type}')
+        return 0, []
 
-    highest_number = 0  # Initialize highest_number before the loop
-    matching_locations = []  # Initialize list to store matching locations
-    if prefix is not None:
-        # Loop through the locations and log any location name that starts with the identified prefix
-        for location in locations:
-            if location['name'].startswith(prefix):
-                logging.debug(f'f_Location found: {location["name"]}')
-                matching_locations.append(location['name'])  # Add matching location to the list
-                # Extract the number after the prefix and update highest_number if it's greater
-                try:
-                    number = int(location['name'][len(prefix):])
-                    if number > highest_number:
-                        highest_number = number
-                except ValueError:
-                    logging.warning(f'f_Invalid number format in location name: {location["name"]}')
-        
-        # Sort matching locations progressively
-        matching_locations.sort(key=lambda x: int(x[len(prefix):]))
-    else:
-        logging.debug(f'f_No valid prefix found for selected type {selected_type}.')
+    logging.debug(f'f_Prefix: {prefix}')
 
-    return highest_number, matching_locations
+    # Find matching locations
+    matching_locations = [loc['name'] for loc in locations if loc['name'].startswith(prefix)]
+    logging.debug(f'f_Matching locations: {matching_locations}')
+
+    # Filter out invalid location names
+    valid_locations = []
+    for loc in matching_locations:
+        try:
+            # Extract the number part and ensure it's an integer
+            int(loc[len(prefix):])
+            valid_locations.append(loc)
+        except ValueError:
+            logging.warning(f'f_Invalid number format in location name: {loc}')
+
+    logging.debug(f'f_Valid locations: {valid_locations}')
+
+    # Sort valid locations by their numeric suffix
+    valid_locations.sort(key=lambda x: int(x[len(prefix):]))
+
+    # Find the highest number
+    highest_number = max([int(loc[len(prefix):]) for loc in valid_locations], default=0)
+    logging.debug(f'f_Highest number: {highest_number}')
+
+    return highest_number, valid_locations
 
 def generate_new_locations(matching_locations, num_new_locations, highest_number):
+    logging.debug('f_call function generate_new_locations')
     new_locations = []
+    
+    # Determine the prefix from the first item in matching_locations
+    if matching_locations:
+        prefix = matching_locations[0].split('_')[0] + '_'
+    else:
+        logging.error('f_No matching locations to determine prefix')
+        return new_locations
+
     existing_numbers = [int(loc.split('_')[1]) for loc in matching_locations]
     
     # Find gaps in the existing sequence
@@ -107,40 +115,18 @@ def generate_new_locations(matching_locations, num_new_locations, highest_number
     
     # Generate new locations to fill gaps first
     for i in range(min(num_new_locations, len(unused_numbers))):
-        new_locations.append(f's_{unused_numbers[i]}')
+        new_locations.append(f'{prefix}{unused_numbers[i]}')
     
     # If there are still new locations to create, continue from the highest number
     next_number = highest_number + 1
     while len(new_locations) < num_new_locations:
-        new_locations.append(f's_{next_number}')
+        new_locations.append(f'{prefix}{next_number}')
         next_number += 1
     
     return new_locations
 
-# def create_new_location(next_number, parent_location_id):
-#     new_location_name = f'gb_{next_number}'
-#     description = 'gridfinity_bin'
-#     location_type_index = 4  # Use the pk for '_gridfinity_bin'
-    
-#     url = f'{base_url}stock/location/'
-#     data = {
-#         'name': new_location_name,
-#         'description': description,
-#         'parent': parent_location_id,
-#         'location_type': location_type_index  # Updated field name
-#     }
-#     response = requests.post(url, headers=headers, json=data)
-#     if response.status_code == 201:
-#         return {
-#             'message': f'New location "{new_location_name}" with description "{description}" and location type index "{location_type_index}" created successfully under parent location ID {parent_location_id}.'
-#         }
-#     else:
-#         return {
-#             'message': f'Failed to create new location. Status code: {response.status_code}',
-#             'details': response.json()
-#         }
-
 def get_location_types():
+    logging.debug('f_call function get_location_types')
     url = f'{base_url}stock/location-type/'
     response = requests.get(url, headers=headers)
     
@@ -153,7 +139,8 @@ def get_location_types():
             'details': response.json()
         }
 
-def create_new_locations(new_locations, parent_location_name, selected_type, location_types):
+def create_new_locations(locations, new_locations, parent_location_name, selected_type, location_types):
+    logging.debug('f_call function create_new_locations')
     # Define the description rules
     description_rules = {
         'bin': 'gridfinity bin',
@@ -164,7 +151,7 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
 
     # Ensure selected_type is not empty
     if not selected_type:
-        logging.error('Selected type is empty')
+        logging.error('f_Selected type is empty')
         return
 
     # Find the type name for the selected type
@@ -175,27 +162,17 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
             break
 
     if type_name is None:
-        logging.error(f'Invalid selected type: {selected_type}')
+        logging.error(f'f_Invalid selected type: {selected_type}')
         return
 
     # Find the description for the selected type
     description = description_rules.get(type_name, '')
-
-    # Get the parent location ID from its name
-    response = requests.get(f'{base_url}stock/location/', headers=headers, params={'name': parent_location_name})
-    if response.status_code != 200:
-        logging.error(f'Failed to get parent location ID: {response.text}')
+   
+    # Find the parent location ID from the existing locations collection using the pathstring field
+    parent_location_id = next((loc['pk'] for loc in locations if loc['pathstring'] == parent_location_name), None)
+    if parent_location_id is None:
+        logging.error(f'f_No location found with name: {parent_location_name}')
         return
-
-    # Log the API response for debugging
-    logging.debug(f'API response: {response.json()}')
-
-    # Check if the response is empty
-    if not response.json():
-        logging.error(f'No location found with name: {parent_location_name}')
-        return
-
-    parent_location_id = response.json()[0]['pk']
 
     # Log the new locations to be created
     for location in new_locations:
@@ -203,15 +180,15 @@ def create_new_locations(new_locations, parent_location_name, selected_type, loc
             'name': location,
             'description': description,
             'parent': parent_location_id,
-            'type': selected_type
+            'type': int(selected_type)  # Ensure this is correctly set as a number
         }
-        logging.info(f'Would create location: {data}')
+        logging.info(f'f_Would create location: {data}')
         # Uncomment the following lines to enable actual creation
-        # response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
-        # if response.status_code == 201:
-        #     logging.info(f'Successfully created location: {location}')
-        # else:
-        #     logging.error(f'Failed to create location: {location}, response: {response.text}')
+        response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
+        if response.status_code == 201:
+            logging.info(f'Successfully created location: {location}')
+        else:
+            logging.error(f'Failed to create location: {location}, response: {response.text}')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -241,33 +218,34 @@ def index():
 def slcreate():
     # Get all locations
     locations = get_all_locations()
-    logging.debug('r_locations function executed')
+    logging.debug('r_Locations function executed')
     
     # Get the list of location types
     location_types = get_location_types()
-    logging.debug('r_location_types function executed')
+    logging.debug('r_Location types function executed')
 
     if request.method == 'POST':
         if 'create_locations' in request.form:
+            logging.debug(f'r_submit_click')
             parent_location_name = request.form.get('parent_location_name')
             selected_type = request.form.get('location_type')
             num_new_locations = int(request.form.get('num_new_locations'))
             logging.debug(f'r_Selected parent location: {parent_location_name}')
             logging.debug(f'r_Selected location type: {selected_type}')
-            logging.debug(f'r_How many locations: {num_new_locations}')
+            logging.debug(f'r_Number of locations: {num_new_locations}')
 
             # Find the highest progressive number and matching locations for the selected type
             highest_number, matching_locations = find_highest_progressive_number(locations, location_types, selected_type)
-            logging.debug(f'r_highest_number identified: {highest_number}')
-            logging.debug(f'r_matching_locations identified: {matching_locations}')
+            logging.debug(f'r_Highest number identified: {highest_number}')
+            logging.debug(f'r_Matching locations identified: {matching_locations}')
             
             # Calculate the next available progressive number
             next_number = highest_number + 1
-            logging.debug(f'r_next_number is: {next_number}')
+            logging.debug(f'r_Next number is: {next_number}')
             
-            # Generate new locations
+            # Generate new locations > location that match with the standard prefix, how many locations are needed, the first highest progressive number available for the new location
             new_locations = generate_new_locations(matching_locations, num_new_locations, highest_number)
-            logging.debug(f'r_new_locations to create: {new_locations}')
+            logging.debug(f'r_New locations to create: {new_locations}')
             
             # Combine and sort all locations progressively
             all_locations = matching_locations + new_locations
@@ -276,10 +254,11 @@ def slcreate():
             return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, all_locations=all_locations, new_locations=new_locations, parent_location_name=parent_location_name, selected_type=selected_type, num_new_locations=num_new_locations)
         
         elif 'execute_creation' in request.form:
+            logging.debug(f'r_execute_click')
             new_locations = request.form.getlist('new_locations')
             parent_location_name = request.form.get('parent_location_name')
             selected_type = request.form.get('location_type')
-            create_new_locations(new_locations, parent_location_name, selected_type, location_types)
+            create_new_locations(locations, new_locations, parent_location_name, selected_type, location_types)
             return redirect(url_for('slcreate'))
 
     return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, all_locations=[], new_locations=[], parent_location_name='', selected_type='', num_new_locations=1)
