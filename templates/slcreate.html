@@ -22,21 +22,19 @@
         <p></p>
         <input type="submit" name="create_locations" value="Submit">
     </form>
-    <h2>Locations</h2>
-    <form action="/slcreate" method="POST">
-        <input type="hidden" name="parent_location_name" value="{{ parent_location_name }}">
-        <input type="hidden" name="location_type" value="{{ selected_type }}">
-        <ul>
-            {% for location in all_locations %}
-                {% if location in new_locations %}
+    {% if new_locations %}
+        <p>Below are the new locations that will be created:</p>
+        <form action="/slcreate" method="POST">
+            <input type="hidden" name="parent_location_name" value="{{ parent_location_name }}">
+            <input type="hidden" name="location_type" value="{{ selected_type }}">
+            <ul>
+                {% for location in new_locations %}
                     <li style="color: red;">{{ location }}<input type="hidden" name="new_locations" value="{{ location }}"></li>
-                {% else %}
-                    <li>{{ location }}</li>
-                {% endif %}
-            {% endfor %}
-        </ul>
-        <input type="submit" name="execute_creation" value="Execute">
-    </form>
+                {% endfor %}
+            </ul>
+            <input type="submit" name="execute_creation" value="Execute">
+        </form>
+    {% endif %}
     <script>
         $(function() {
             var locations = {{ locations | tojson | safe }};

@@ -22,6 +22,14 @@ headers = {
     'Content-Type': 'application/json'
 }
 
+# Define the location type configuration
+location_type_config = {
+    1: {'prefix': 'a_', 'description': 'shelf armadio'},  # Shelf
+    2: {'prefix': 'b_', 'description': 'box contenitore'},  # Box
+    3: {'prefix': 's_', 'description': 'sorter organizer'},  # Sorter
+    4: {'prefix': 'g_', 'description': 'gridfinity bin'}   # Bin
+}
+
 # Function to get all locations
 def get_all_locations():
     logging.debug('f_call function get_all_location')
@@ -55,20 +63,13 @@ def find_highest_progressive_number(locations, location_types, selected_type):
     logging.debug(f'f_Location types provided: {location_types}')
     logging.debug(f'f_Selected type provided: {selected_type}')
 
-    # Define the prefixes
-    prefix_map = {
-        1: 'a_',  # Shelf
-        2: 'b_',  # Box
-        3: 's_',  # Sorter
-        4: 'gb_'  # Bin
-    }
-
-    # Find the prefix for the selected type
-    prefix = prefix_map.get(int(selected_type))
-    if not prefix:
-        logging.error(f'f_No prefix found for selected type: {selected_type}')
+    # Get the configuration for the selected type
+    config = location_type_config.get(int(selected_type))
+    if not config:
+        logging.error(f'f_No configuration found for selected type: {selected_type}')
         return 0, []
 
+    prefix = config['prefix']
     logging.debug(f'f_Prefix: {prefix}')
 
     # Find matching locations
@@ -96,16 +97,17 @@ def find_highest_progressive_number(locations, location_types, selected_type):
 
     return highest_number, valid_locations
 
-def generate_new_locations(matching_locations, num_new_locations, highest_number):
+def generate_new_locations(matching_locations, num_new_locations, highest_number, selected_type):
     logging.debug('f_call function generate_new_locations')
     new_locations = []
-    
-    # Determine the prefix from the first item in matching_locations
-    if matching_locations:
-        prefix = matching_locations[0].split('_')[0] + '_'
-    else:
-        logging.error('f_No matching locations to determine prefix')
+
+    # Get the configuration for the selected type
+    config = location_type_config.get(int(selected_type))
+    if not config:
+        logging.error(f'f_No configuration found for selected type: {selected_type}')
         return new_locations
+
+    prefix = config['prefix']
 
     existing_numbers = [int(loc.split('_')[1]) for loc in matching_locations]
     
@@ -115,12 +117,12 @@ def generate_new_locations(matching_locations, num_new_locations, highest_number
     
     # Generate new locations to fill gaps first
     for i in range(min(num_new_locations, len(unused_numbers))):
-        new_locations.append(f'{prefix}{unused_numbers[i]}')
+        new_locations.append(f'{prefix}{unused_numbers[i]:04d}')
     
     # If there are still new locations to create, continue from the highest number
     next_number = highest_number + 1
     while len(new_locations) < num_new_locations:
-        new_locations.append(f'{prefix}{next_number}')
+        new_locations.append(f'{prefix}{next_number:04d}')
         next_number += 1
     
     return new_locations
@@ -132,7 +134,9 @@ def get_location_types():
     
     if response.status_code == 200:
         location_types = response.json()
-        return location_types
+        # Filter out "room" and "home" location types
+        filtered_location_types = [lt for lt in location_types if lt['name'].lower() not in ['room', 'home']]
+        return filtered_location_types
     else:
         return {
             'message': f'Failed to retrieve location types. Status code: {response.status_code}',
@@ -141,33 +145,21 @@ def get_location_types():
 
 def create_new_locations(locations, new_locations, parent_location_name, selected_type, location_types):
     logging.debug('f_call function create_new_locations')
-    # Define the description rules
-    description_rules = {
-        'bin': 'gridfinity bin',
-        'sorter': 'sorter organizer',
-        'box': 'box contenitore',
-        'shelf': 'shelf armadio'
-    }
 
     # Ensure selected_type is not empty
     if not selected_type:
         logging.error('f_Selected type is empty')
         return
 
-    # Find the type name for the selected type
-    type_name = None
-    for location_type in location_types:
-        if location_type['pk'] == int(selected_type):
-            type_name = location_type['name']
-            break
-
-    if type_name is None:
-        logging.error(f'f_Invalid selected type: {selected_type}')
+    # Get the configuration for the selected type
+    config = location_type_config.get(int(selected_type))
+    if not config:
+        logging.error(f'f_No configuration found for selected type: {selected_type}')
         return
 
-    # Find the description for the selected type
-    description = description_rules.get(type_name, '')
-   
+    prefix = config['prefix']
+    description = config['description']
+
     # Find the parent location ID from the existing locations collection using the pathstring field
     parent_location_id = next((loc['pk'] for loc in locations if loc['pathstring'] == parent_location_name), None)
     if parent_location_id is None:
@@ -180,8 +172,9 @@ def create_new_locations(locations, new_locations, parent_location_name, selecte
             'name': location,
             'description': description,
             'parent': parent_location_id,
-            'type': int(selected_type)  # Ensure this is correctly set as a number
+            'location_type': int(selected_type)  # Ensure this is correctly set as a number
         }
+
         logging.info(f'f_Would create location: {data}')
         # Uncomment the following lines to enable actual creation
         response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
@@ -244,7 +237,7 @@ def slcreate():
             logging.debug(f'r_Next number is: {next_number}')
             
             # Generate new locations > location that match with the standard prefix, how many locations are needed, the first highest progressive number available for the new location
-            new_locations = generate_new_locations(matching_locations, num_new_locations, highest_number)
+            new_locations = generate_new_locations(matching_locations, num_new_locations, highest_number, selected_type)
             logging.debug(f'r_New locations to create: {new_locations}')
             
             # Combine and sort all locations progressively
