@@ -40,7 +40,7 @@ def move_sublocations(sublocations, target_parent_id):
     for sublocation in sublocations:
         sublocation_id = sublocation['pk']
         data = {'parent': target_parent_id}
-        response = requests.patch(f'{url}{sublocation_id}/', headers=headers, json(data))
+        response = requests.patch(f'{url}{sublocation_id}/', headers=headers, json=data)
         if response.status_code != 200:
             logging.error(f'Failed to move sublocation {sublocation_id}. Status code: {response.status_code}')
     return sublocations
@@ -168,12 +168,12 @@ def create_new_locations(locations, new_locations, parent_location_name, selecte
         }
 
         logging.info(f'f_Would create location: {data}')
-        # Uncomment the following lines to enable actual creation
-        # response = requests.post(f'{base_url}stock/location/', headers=headers, json(data))
-        # if response.status_code == 201:
-        #     logging.info(f'Successfully created location: {location}')
-        # else:
-        #     logging.error(f'Failed to create location: {location}, response: {response.text}')
+        # Enable actual creation
+        response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
+        if response.status_code == 201:
+            logging.info(f'Successfully created location: {location}')
+        else:
+            logging.error(f'Failed to create location: {location}, response: {response.text}')
 
 def backup_inventree():
     try:
@@ -194,3 +194,13 @@ def backup_inventree():
     except Exception as e:
         logging.error(f'Backup failed: {str(e)}')
         exit(1)
+
+def get_inventree_version():
+    try:
+        response = requests.get(f'{base_url}version/', headers=headers)
+        response.raise_for_status()
+        version_info = response.json()
+        return version_info.get('version', 'Unknown version')
+    except requests.exceptions.RequestException as e:
+        logging.error(f'Error fetching InvenTree version: {e}')
+        return 'Error fetching version'

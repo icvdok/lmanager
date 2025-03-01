@@ -77,6 +77,8 @@ nav ul li a {
     color: rgb(65.1%, 61.57%, 55.69%);
     text-decoration: none;
     font-weight: normal;
+    border: 1px solid #ccc; /* Added border style */
+    padding: 5px 10px; /* Added padding for better appearance */
 }
 
 nav ul li a:hover {
@@ -84,7 +86,7 @@ nav ul li a:hover {
 }
 
 nav ul li img.logo {
-    height: 50px;
+    height: 50px; /* Set logo height to 50px */
     margin-right: 5px;
 }
 
@@ -113,4 +115,23 @@ input[type="checkbox"] {
 input[type="checkbox"]:checked {
     background-color: rgb(65.1%, 61.57%, 55.69%); /* Change the background color when checked */
     border: 2px solid rgb(65.1%, 61.57%, 55.69%); /* Change the border color when checked */
+}
+
+.info-box {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: rgb(71, 71, 71);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #333;
+}
+
+.logo-container {
+    text-align: left; /* Move logo to the left */
+    margin-bottom: 10px;
+}
+
+.logo {
+    height: 50px; /* Set logo height to 50px */
 }

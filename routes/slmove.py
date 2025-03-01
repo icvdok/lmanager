@@ -1,11 +1,16 @@
 from flask import Blueprint, render_template, request
 import logging
-from utils.utils import get_all_locations, get_sublocations, move_sublocations
+from utils.utils import get_all_locations, get_sublocations, move_sublocations, get_inventree_version
+import os
 
 slmove_bp = Blueprint('slmove', __name__)
 
 @slmove_bp.route('/slmove', methods=['GET', 'POST'])
 def slmove():
+    base_url = os.getenv('BASE_URL')
+    version_info = get_inventree_version()
+    version = version_info.get('server', 'Unknown version')
+    
     locations = get_all_locations()
     sublocations = []
     source_location_parent = ''
@@ -26,4 +31,4 @@ def slmove():
             sublocations = [sublocation for sublocation in sublocations if str(sublocation['pk']) in selected_sublocations]
             sublocations = move_sublocations(sublocations, target_location['pk'])
 
-    return render_template('slmove.html', locations=locations, sublocations=sublocations, source_location_parent=source_location_parent, target_location_parent=target_location_parent)
+    return render_template('slmove.html', base_url=base_url, version=version, locations=locations, sublocations=sublocations, source_location_parent=source_location_parent, target_location_parent=target_location_parent)

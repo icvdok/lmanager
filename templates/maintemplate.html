@@ -10,16 +10,13 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    <style>
-        ul {
-            list-style-type: none; /* Remove dots from the list */
-        }
-    </style>
 </head>
 <body>
+    <div class="logo-container">
+        <a href="{{ url_for('home.index') }}"><img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo"></a>
+    </div>
     <nav>
         <ul>
-            <li><a href="{{ url_for('home.index') }}"><img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo"></a></li>
             <li class="app-name">Inventree location manager</li>
             <li><a href="{{ url_for('home.index') }}">Home</a></li>
             <li><a href="{{ url_for('slcreate.slcreate') }}">Sublocation create</a></li>
@@ -27,6 +24,10 @@
             <li><a href="{{ url_for('backup.backup') }}">Backup</a></li>
         </ul>
     </nav>
+    <div class="info-box">
+        <p>Base URL: {{ base_url }}</p>
+        <p>Version: {{ version }}</p>
+    </div>
     <div class="container">
         {% block content %}
         {% endblock %}

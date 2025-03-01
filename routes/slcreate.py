@@ -1,11 +1,16 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 import logging
-from utils.utils import get_all_locations, get_location_types, find_highest_progressive_number, generate_new_locations, create_new_locations
+from utils.utils import get_all_locations, get_location_types, find_highest_progressive_number, generate_new_locations, create_new_locations, get_inventree_version
+import os
 
 slcreate_bp = Blueprint('slcreate', __name__)
 
 @slcreate_bp.route('/slcreate', methods=['GET', 'POST'])
 def slcreate():
+    base_url = os.getenv('BASE_URL')
+    version_info = get_inventree_version()
+    version = version_info.get('server', 'Unknown version')
+    
     locations = get_all_locations()
     logging.debug('r_Locations function executed')
     
@@ -35,7 +40,7 @@ def slcreate():
             all_locations = matching_locations + new_locations
             all_locations.sort(key=lambda x: int(x.split('_')[1]))
             
-            return render_template('slcreate.html', locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, all_locations=all_locations, new_locations=new_locations, parent_location_name=parent_location_name, selected_type=selected_type, num_new_locations=num_new_locations)
+            return render_template('slcreate.html', base_url=base_url, version=version, locations=locations, highest_number=highest_number, next_number=next_number, location_types=location_types, all_locations=all_locations, new_locations=new_locations, parent_location_name=parent_location_name, selected_type=selected_type, num_new_locations=num_new_locations)
         
         elif 'execute_creation' in request.form:
             logging.debug(f'r_execute_click')
@@ -45,4 +50,4 @@ def slcreate():
             create_new_locations(locations, new_locations, parent_location_name, selected_type, location_types)
             return redirect(url_for('slcreate.slcreate'))
 
-    return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, all_locations=[], new_locations=[], parent_location_name='', selected_type='', num_new_locations=1)
+    return render_template('slcreate.html', base_url=base_url, version=version, locations=locations, highest_number=0, next_number=1, location_types=location_types, all_locations=[], new_locations=[], parent_location_name='', selected_type='', num_new_locations=1)
