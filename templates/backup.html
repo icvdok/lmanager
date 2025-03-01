@@ -1,0 +1,14 @@
+{% extends "maintemplate.html" %}
+
+{% block title %}Backup{% endblock %}
+
+{% block content %}
+<h1>Backup Inventree</h1>
+<p>Generate Inventree backup</p>
+<form action="/backup" method="POST">
+    <input type="submit" value="Start Backup">
+</form>
+{% if message %}
+    <p>{{ message }}</p>
+{% endif %}
+{% endblock %}

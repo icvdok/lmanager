@@ -4,6 +4,7 @@ import json
 from dotenv import load_dotenv
 import os
 import logging
+import paramiko
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -16,18 +17,14 @@ app = Flask(__name__)
 # Get the API token and base URL from environment variables
 api_token = os.getenv('INVENTREE_API_TOKEN')
 base_url = os.getenv('BASE_URL')
+ssh_host = os.getenv('SSH_HOST')
+ssh_user = os.getenv('SSH_USER')
+ssh_key_path = os.getenv('SSH_KEY_PATH')
+docker_compose_path = os.getenv('DOCKER_COMPOSE_PATH')
 # Set up the headers with your API token
 headers = {
     'Authorization': f'Token {api_token}',
     'Content-Type': 'application/json'
-}
-
-# Define the location type configuration
-location_type_config = {
-    1: {'prefix': 'a_', 'description': 'shelf armadio'},  # Shelf
-    2: {'prefix': 'b_', 'description': 'box contenitore'},  # Box
-    3: {'prefix': 's_', 'description': 'sorter organizer'},  # Sorter
-    4: {'prefix': 'g_', 'description': 'gridfinity bin'}   # Bin
 }
 
 # Function to get all locations
@@ -63,13 +60,20 @@ def find_highest_progressive_number(locations, location_types, selected_type):
     logging.debug(f'f_Location types provided: {location_types}')
     logging.debug(f'f_Selected type provided: {selected_type}')
 
-    # Get the configuration for the selected type
-    config = location_type_config.get(int(selected_type))
-    if not config:
-        logging.error(f'f_No configuration found for selected type: {selected_type}')
+    # Define the prefixes
+    prefix_map = {
+        1: 'a_',  # Shelf
+        2: 'b_',  # Box
+        3: 's_',  # Sorter
+        4: 'g_'   # Bin
+    }
+
+    # Find the prefix for the selected type
+    prefix = prefix_map.get(int(selected_type))
+    if not prefix:
+        logging.error(f'f_No prefix found for selected type: {selected_type}')
         return 0, []
 
-    prefix = config['prefix']
     logging.debug(f'f_Prefix: {prefix}')
 
     # Find matching locations
@@ -100,14 +104,20 @@ def find_highest_progressive_number(locations, location_types, selected_type):
 def generate_new_locations(matching_locations, num_new_locations, highest_number, selected_type):
     logging.debug('f_call function generate_new_locations')
     new_locations = []
+    
+    # Define the prefixes
+    prefix_map = {
+        1: 'a_',  # Shelf
+        2: 'b_',  # Box
+        3: 's_',  # Sorter
+        4: 'g_'   # Bin
+    }
 
-    # Get the configuration for the selected type
-    config = location_type_config.get(int(selected_type))
-    if not config:
-        logging.error(f'f_No configuration found for selected type: {selected_type}')
+    # Determine the prefix for the selected type
+    prefix = prefix_map.get(int(selected_type))
+    if not prefix:
+        logging.error(f'f_No prefix found for selected type: {selected_type}')
         return new_locations
-
-    prefix = config['prefix']
 
     existing_numbers = [int(loc.split('_')[1]) for loc in matching_locations]
     
@@ -134,9 +144,7 @@ def get_location_types():
     
     if response.status_code == 200:
         location_types = response.json()
-        # Filter out "room" and "home" location types
-        filtered_location_types = [lt for lt in location_types if lt['name'].lower() not in ['room', 'home']]
-        return filtered_location_types
+        return location_types
     else:
         return {
             'message': f'Failed to retrieve location types. Status code: {response.status_code}',
@@ -145,20 +153,32 @@ def get_location_types():
 
 def create_new_locations(locations, new_locations, parent_location_name, selected_type, location_types):
     logging.debug('f_call function create_new_locations')
+    # Define the description rules
+    description_rules = {
+        'g_': 'gridfinity bin',
+        's_': 'sorter organizer',
+        'b_': 'box contenitore',
+        'a_': 'shelf armadio'
+    }
 
     # Ensure selected_type is not empty
     if not selected_type:
         logging.error('f_Selected type is empty')
         return
 
-    # Get the configuration for the selected type
-    config = location_type_config.get(int(selected_type))
-    if not config:
-        logging.error(f'f_No configuration found for selected type: {selected_type}')
+    # Find the type name for the selected type
+    type_name = None
+    for location_type in location_types:
+        if location_type['pk'] == int(selected_type):
+            type_name = location_type['name']
+            break
+
+    if type_name is None:
+        logging.error(f'f_Invalid selected type: {selected_type}')
         return
 
-    prefix = config['prefix']
-    description = config['description']
+    # Find the description for the selected type
+    description = description_rules.get(type_name, '')
 
     # Find the parent location ID from the existing locations collection using the pathstring field
     parent_location_id = next((loc['pk'] for loc in locations if loc['pathstring'] == parent_location_name), None)
@@ -177,11 +197,36 @@ def create_new_locations(locations, new_locations, parent_location_name, selecte
 
         logging.info(f'f_Would create location: {data}')
         # Uncomment the following lines to enable actual creation
-        response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
-        if response.status_code == 201:
-            logging.info(f'Successfully created location: {location}')
+        # response = requests.post(f'{base_url}stock/location/', headers=headers, json=data)
+        # if response.status_code == 201:
+        #     logging.info(f'Successfully created location: {location}')
+        # else:
+        #     logging.error(f'Failed to create location: {location}, response: {response.text}')
+
+def backup_inventree():
+    """
+    Perform a backup of the InvenTree database on the remote server.
+    """
+    try:
+        # Set up the SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        logging.debug(f'Connecting to {ssh_host} as {ssh_user} using key {ssh_key_path}')
+        ssh.connect(ssh_host, username=ssh_user, key_filename=ssh_key_path)
+
+        # # Execute the backup command
+        command = f'cd {docker_compose_path} && docker compose -f docker-compose.yml run inventree-server invoke backup'
+        stdin, stdout, stderr = ssh.exec_command(command)
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status == 0:
+            logging.info(f'Backup successful: {stdout.read().decode()}')
         else:
-            logging.error(f'Failed to create location: {location}, response: {response.text}')
+            logging.error(f'Backup failed: {stderr.read().decode()}')
+            exit(1)
+        ssh.close()
+    except Exception as e:
+        logging.error(f'Backup failed: {str(e)}')
+        exit(1)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -255,6 +300,17 @@ def slcreate():
             return redirect(url_for('slcreate'))
 
     return render_template('slcreate.html', locations=locations, highest_number=0, next_number=1, location_types=location_types, all_locations=[], new_locations=[], parent_location_name='', selected_type='', num_new_locations=1)
+
+@app.route('/backup', methods=['GET', 'POST'])
+def backup():
+    if request.method == 'POST':
+        try:
+            backup_inventree()
+            message = "Backup successful."
+        except Exception as e:
+            message = f"Backup failed: {str(e)}"
+        return render_template('backup.html', message=message)
+    return render_template('backup.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5556, debug=True)
